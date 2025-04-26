@@ -1,0 +1,155 @@
+Types of Certs:
+=============
+1)SSL/TLS Certificates (X.509)
+    Used for HTTPS connections to encrypt data transmission.
+    Can be self-signed or issued by a Certificate Authority (CA).
+    Usually consists of:
+
+        Server Certificate (.crt or .pem)
+        Private Key (.key or .pem)
+        Intermediate CA Certificates (.crt, .pem, or bundled as chain.pem)
+
+2)Java Keystore (JKS) & PKCS12 Certificates (Tomcat-specific)
+    Apache Tomcat typically uses Java Keystore (JKS) or PKCS12 (.pfx, .p12) format to store certificates.
+Key types:
+
+    Keystore file (.jks, .pfx, .p12) – contains private key and certificates.
+    Truststore file (.jks, .p12) – contains trusted CA certificates.
+
+3)Root and Intermediate CA Certificates
+
+    Used for certificate chain validation.
+    Stored in /etc/pki/tls/certs/ or /etc/ssl/certs/ in RHEL.
+
+Apache (httpd)
+
+    /etc/httpd/conf.d/ssl.conf (SSL configuration)
+    /etc/pki/tls/certs/ (public certificates)
+    /etc/pki/tls/private/ (private keys)
+
+Tomcat
+
+    /etc/tomcat/conf/keystore.jks (Java Keystore)
+    /etc/tomcat/conf/server.xml (SSL/TLS settings)
+
+
+
+=========================================================================================
+
+In the context of Java KeyStores (JKS) and certificates, there are several types of entry types you may encounter. Here’s a detailed explanation of each:
+1. PrivateKeyEntry
+
+    Description: This type of entry contains a private key and its associated certificate chain. The private key is used for decrypting data that was encrypted with the corresponding public key, and for creating digital signatures.
+    Use Case: Typically used for SSL/TLS certificates, where a server needs to present its certificate to clients.
+    Example: A server's SSL certificate and its private key.
+
+2. TrustedCertificateEntry
+
+    Description: This entry only contains a single public key certificate, without any associated private key. It is usually a trusted certificate from a Certificate Authority (CA) or a self-signed certificate.
+    Use Case: Used to verify the authenticity of another entity's certificate. For example, a client trusts the CA's certificate to verify the server's certificate.
+    Example: A CA root certificate or an intermediate CA certificate.
+
+3. SecretKeyEntry
+
+    Description: This type of entry contains a secret key for symmetric encryption algorithms (like AES). In symmetric encryption, the same key is used for both encryption and decryption.
+    Use Case: Used for scenarios requiring symmetric encryption, such as securing data stored on disk.
+    Example: A key used for encrypting and decrypting files.
+    
+
+===================================================================================
+================================================================================
+
+Cyber check for sha-1:
+===========================
+
+grep -r "SHA1" /etc/httpd/conf /etc/httpd/conf.d
+openssl x509 -in /path/to/cert.crt -text -noout | grep 'Signature Algorithm'
+Review Keystore and Certificates:
+    If the configuration references keystore files (e.g., keystore.jks), inspect the keystore to determine the hash algorithm used for the certificates.
+    Use the keytool command to inspect the keystore:
+        
+        path of keytool is - /opt/clod/jdk-11.0.20/bin
+        keytool -list -v -keystore /opt/clod/tomcat/truststore/truststore.jks
+
+            Look for the Signature algorithm line in the output to see if SHA-1 is being used.
+
+
+=============================================================================
+===================================================================================
+
+
+Types of Keystores in Certificates and commands to view and renew them:
+--------------------------------------------------------------------------- 
+1)View JKS (Java KeyStore)
+    Check Existing Certificates
+    ------------------------------
+    $ keytool -list -v -keystore keystore.jks -storetype JKS
+
+    Remove the Expired Certificate
+    -----------------------------
+    $ keytool -delete -alias mycert -keystore keystore.jks
+    Replace mycert with the alias of your expired certificate.
+
+    Import the New Certificate
+    ----------------------------
+    $ keytool -import -trustcacerts -alias mycert -file new_certificate.crt -keystore keystore.jks
+    -trustcacerts → Trusts CA-signed certificates
+    -alias mycert → Defines an alias for the certificate
+    -file new_certificate.crt → Path to the new certificate
+
+    Verify the Import
+    ----------------------
+    $ keytool -list -v -keystore keystore.jks | grep mycert
+    
+    Use Case: Commonly used in Java-based applications, including Tomcat and Spring Boot.
+
+2)PKCS12 (Public Key Cryptography Standard #12)
+    File Extension: .p12 or .pfx
+    $ keytool -list -v -keystore certificate.p12 -storetype PKCS12
+    or
+    $ openssl pkcs12 -info -in certificate.p12 -noout
+    -noout → Prevents displaying the certificate content in Base64
+    Use Case: Commonly used for SSL/TLS certificates and Microsoft IIS, and can be converted between systems easily.
+
+    renewal prcocess:
+    -------------------
+    If you need a backup:
+    $ openssl pkcs12 -export -out backup.p12 -inkey server.key -in old_certificate.crt -certfile ca_bundle.crt
+    
+    Remove Expired Certificate:
+    ---------------------------
+    There is no direct way to remove a certificate from a PKCS12 keystore. You need to recreate it:
+    $ openssl pkcs12 -export -out new_certificate.p12 -inkey server.key -in new_certificate.crt -certfile ca_bundle.crt
+
+    Verify the New Keystore
+    $ openssl pkcs12 -info -in new_certificate.p12 -noout
+
+3)PEM (Privacy-Enhanced Mail)
+    File Extension: .pem, .crt, .key
+    $ openssl x509 -in certificate.pem -text -noout
+    or if checking a private key:
+    $ openssl rsa -in private.key -check
+    or for a certificate request (CSR):
+    $ openssl req -in request.csr -text -noout
+    Use Case: Common for Apache, Nginx, and OpenSSL-based applications.
+
+4)BCFKS (Bouncy Castle FIPS KeyStore)
+    File Extension: .bcfks
+    Supports: Stronger encryption than JKS and PKCS12
+    $ keytool -list -keystore keystore.bcfks -storetype BCFKS / -providerclass org.bouncycastle.jcajce.provider.BouncyCastleFipsProvider
+
+    Use Case: Used in environments requiring FIPS 140-2 compliance (e.g., financial or government applications).
+
+5)Windows-MY (Windows Keystore)
+    Type: Windows-MY
+    Supports: Certificates stored in the Windows Certificate Store
+    $ certutil -store MY
+    Use Case: Used in Microsoft IIS, Edge, Chrome, and other Windows applications.
+    Advantage: No need to manage separate keystore files.
+
+6)PKCS11 (Hardware Security Module - HSM)
+    Supports: Hardware-based keystores (like HSMs or Smart Cards)
+    $ keytool -list -keystore NONE -storetype PKCS11
+    Use Case: Used for high-security environments (e.g., government agencies, banks).
+
+

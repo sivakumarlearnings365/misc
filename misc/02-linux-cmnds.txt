@@ -1,0 +1,61 @@
+File searches:
+========================
+==========================
+
+
+1- to check .log files which are older than 100 days in rhel server with time stamps
+-------------------------------------------------------------------------------------
+find /path/to/logs -name "*.log" -type f -mtime +100 -exec ls -l {} \;
+	-type f: Ensures you're only considering files (not directories).
+	-exec ls -l {} \;: For each file found, this will display detailed information including the timestamp 
+find /path/to/logs -name "*.log" -type f -mtime +100 -exec stat {} \;
+	
+	The stat command gives you detailed information about each file, including:
+
+    	Access time (atime): The last time the file was read.
+	Modify time (mtime): The last time the file's content was modified.
+	Change time (ctime): The last time the file's metadata (permissions, owner, etc.) was modified.
+
+2- Find Files Based on Access Time (atime)
+---------------------------------------------
+Files accessed in the last 100 days:
+	find /path/to/directory -type f -atime -100
+Files accessed exactly 100 days ago:
+	find /path/to/directory -type f -atime 100
+
+3- Find Files Based on Change Time (ctime)
+-----------------------------------------
+Files with metadata changes more than 100 days ago:
+	find /path/to/directory -type f -ctime +100
+Files with metadata changes in the last 100 days:
+	find /path/to/directory -type f -ctime -100
+Files with metadata changes exactly 100 days ago:
+	find /path/to/directory -type f -ctime 100
+
+4-  Find Files Modified Before a Specific Date Using -newermt
+--------------------------------------------------------------
+Find files modified before a specific date (e.g., "2025-01-01"):
+	find /path/to/directory -type f -newermt "2025-01-01" ! -newermt "2025-02-01"
+		-newermt stands for "newer than modification time". 
+
+=============================================================================
+===================================================================================
+
+
+file size check:
+----------------
+1- Look for directories that are using up space, and are not on different partition
+ # du -hx  --max-depth=1 | grep ‘G’
+
+===============================================================================================
+======================================================================================================
+
+systemctl enable--now rabbitmq-server
+	it will enable and start the service at a time
+useradd --home-dir /usr/local/tomcat --shell /sbin/nologin tomcat
+	user creation with home and shell
+
+======================================================================
+downling in specicf location using curl with option 'o'
+-----------------------------------------------------
+	$ curl -o /etc/yum.repos.d/rabbitmq.repo https://raw.githubusercontent.com/hkhcoder/vprofile-project/refs/heads/awsliftandshift/al2023rmq.repo
